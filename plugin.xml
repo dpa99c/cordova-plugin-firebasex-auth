@@ -17,7 +17,7 @@
 
     <dependency id="cordova-plugin-firebasex-core" />
 
-    <js-module name="firebasex-auth" src="www/firebasex-auth.js">
+    <js-module name="FirebasexAuthPlugin" src="www/firebasex-auth.js">
         <merges target="FirebasexAuth" />
     </js-module>
 
