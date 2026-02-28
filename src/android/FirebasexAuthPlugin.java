@@ -332,7 +332,6 @@ public class FirebasexAuthPlugin extends CordovaPlugin {
                         return;
                     }
 
-                    user.getMultiFactorInfo();
                     user.getMultiFactor().getSession().addOnCompleteListener(new OnCompleteListener<MultiFactorSession>() {
                         @Override
                         public void onComplete(@NonNull Task<MultiFactorSession> task) {
@@ -690,9 +689,7 @@ public class FirebasexAuthPlugin extends CordovaPlugin {
                     OAuthProvider.Builder provider = OAuthProvider.newBuilder("apple.com");
                     if (args.length() > 0 && !args.isNull(0)) {
                         String locale = args.getString(0);
-                        Map<String, String> customParameters = new HashMap<>();
-                        customParameters.put("locale", locale);
-                        provider.setCustomParameters(customParameters);
+                        provider.addCustomParameter("locale", locale);
                     }
 
                     authResultCallbackContext = callbackContext;
@@ -719,9 +716,7 @@ public class FirebasexAuthPlugin extends CordovaPlugin {
                     OAuthProvider.Builder provider = OAuthProvider.newBuilder("microsoft.com");
                     if (args.length() > 0 && !args.isNull(0)) {
                         String locale = args.getString(0);
-                        Map<String, String> customParameters = new HashMap<>();
-                        customParameters.put("locale", locale);
-                        provider.setCustomParameters(customParameters);
+                        provider.addCustomParameter("locale", locale);
                     }
 
                     authResultCallbackContext = callbackContext;
@@ -776,7 +771,9 @@ public class FirebasexAuthPlugin extends CordovaPlugin {
                                 String key = keys.next();
                                 paramMap.put(key, customParams.getString(key));
                             }
-                            provider.setCustomParameters(paramMap);
+                            for (Map.Entry<String, String> entry : paramMap.entrySet()) {
+                                provider.addCustomParameter(entry.getKey(), entry.getValue());
+                            }
                         }
                         if (options.has("scopes")) {
                             JSONArray scopes = options.getJSONArray("scopes");

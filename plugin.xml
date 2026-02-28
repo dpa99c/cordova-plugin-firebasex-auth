@@ -35,7 +35,7 @@
         </config-file>
 
         <source-file src="src/android/FirebasexAuthPlugin.java" target-dir="app/src/main/java/org/apache/cordova/firebasex/" />
-        <source-file src="src/android/build.gradle" custom="true" target-dir="app" />
+        <framework src="src/android/build.gradle" custom="true" type="gradleReference" />
     </platform>
 
     <!-- iOS -->
