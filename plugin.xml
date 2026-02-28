@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin id="cordova-plugin-firebasex-auth"
+    version="1.0.0"
+    xmlns="http://apache.org/cordova/ns/plugins/1.0"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <name>Firebasex Auth</name>
+    <description>Firebase Authentication for Cordova</description>
+    <license>MIT</license>
+    <keywords>cordova,firebase,auth,authentication</keywords>
+
+    <engines>
+        <engine name="cordova" version=">=12" />
+        <engine name="cordova-android" version=">=14" />
+        <engine name="cordova-ios" version=">=7" />
+    </engines>
+
+    <dependency id="cordova-plugin-firebasex-core" />
+
+    <js-module name="firebasex-auth" src="www/firebasex-auth.js">
+        <merges target="FirebasexAuth" />
+    </js-module>
+
+    <preference name="SETUP_RECAPTCHA_VERIFICATION" default="false" />
+    <preference name="IOS_ENABLE_APPLE_SIGNIN" default="false" />
+    <preference name="IOS_GOOGLE_SIGIN_VERSION" default="9.0.0" />
+
+    <!-- Android -->
+    <platform name="android">
+        <config-file parent="/*" target="res/xml/config.xml">
+            <feature name="FirebasexAuthPlugin">
+                <param name="android-package" value="org.apache.cordova.firebasex.FirebasexAuthPlugin" />
+                <param name="onload" value="true" />
+            </feature>
+        </config-file>
+
+        <source-file src="src/android/FirebasexAuthPlugin.java" target-dir="app/src/main/java/org/apache/cordova/firebasex/" />
+        <source-file src="src/android/build.gradle" custom="true" target-dir="app" />
+    </platform>
+
+    <!-- iOS -->
+    <platform name="ios">
+        <config-file parent="/*" target="config.xml">
+            <feature name="FirebasexAuthPlugin">
+                <param name="ios-package" value="FirebasexAuthPlugin" />
+                <param name="onload" value="true" />
+            </feature>
+        </config-file>
+
+        <header-file src="src/ios/FirebasexAuthPlugin.h" />
+        <source-file src="src/ios/FirebasexAuthPlugin.m" />
+        <header-file src="src/ios/AppDelegate+FirebasexAuth.h" />
+        <source-file src="src/ios/AppDelegate+FirebasexAuth.m" />
+
+        <podspec>
+            <config>
+                <source url="https://cdn.cocoapods.org/" />
+            </config>
+            <pods use-frameworks="true">
+                <pod name="FirebaseAuth" spec="12.9.0" />
+                <pod name="GoogleSignIn" spec="9.0.0" />
+            </pods>
+        </podspec>
+
+        <framework src="AuthenticationServices.framework" />
+
+        <hook src="scripts/ios/after_plugin_install.js" type="after_plugin_install" />
+        <hook src="scripts/ios/before_plugin_uninstall.js" type="before_plugin_uninstall" />
+    </platform>
+
+</plugin>
