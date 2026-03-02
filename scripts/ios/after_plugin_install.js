@@ -1,9 +1,41 @@
+/**
+ * @file after_plugin_install.js
+ * @brief Hook script that runs after the auth plugin is installed on iOS.
+ *
+ * Configures authentication-related settings in the iOS platform based on plugin variables:
+ *
+ * - `SETUP_RECAPTCHA_VERIFICATION`: When `true`, reads the `REVERSED_CLIENT_ID` from
+ *   `GoogleService-Info.plist` and adds it as a URL scheme in the app's `Info.plist`.
+ *   Required for Firebase phone authentication with reCAPTCHA verification.
+ *
+ * - `IOS_ENABLE_APPLE_SIGNIN`: When `true`, adds the `com.apple.developer.applesignin`
+ *   entitlement with `["Default"]` to both Debug and Release entitlements plists.
+ *
+ * - `IOS_GOOGLE_SIGIN_VERSION`: When set, overrides the GoogleSignIn pod version in the
+ *   Podfile to the specified semantic version.
+ *
+ * Plugin variables are resolved from the hook context's plugin info (defaults) and
+ * CLI variables (overrides).
+ */
 var fs = require("fs");
 var path = require("path");
 var plist = require("plist");
 
+/**
+ * Cordova hook entry point.
+ *
+ * Resolves plugin variables from the context, determines the app name from `config.xml`,
+ * then applies authentication configuration based on enabled plugin variables.
+ *
+ * @param {object} context - The Cordova hook context.
+ */
 module.exports = function(context) {
+    /**
+     * @type {Object} Resolved plugin variable key/value pairs.
+     * Defaults are extracted from plugin.xml preferences, then overridden by CLI variables.
+     */
     var pluginVariables = {};
+    // Extract default plugin variable values from plugin.xml preference elements
     var plugin = context.opts.plugin;
     if(plugin && plugin.pluginInfo && plugin.pluginInfo._et && plugin.pluginInfo._et._root && plugin.pluginInfo._et._root._children){
         plugin.pluginInfo._et._root._children.forEach(function(child){
@@ -37,7 +69,9 @@ module.exports = function(context) {
         return;
     }
 
-    // Handle SETUP_RECAPTCHA_VERIFICATION
+    // Handle SETUP_RECAPTCHA_VERIFICATION:
+    // Adds the REVERSED_CLIENT_ID from GoogleService-Info.plist as a URL scheme
+    // in the app's Info.plist, enabling reCAPTCHA-based phone authentication.
     if (pluginVariables["SETUP_RECAPTCHA_VERIFICATION"] === "true") {
         try {
             var googlePlistPath = path.join(iosPlatformPath, appName, "GoogleService-Info.plist");
@@ -77,7 +111,9 @@ module.exports = function(context) {
         }
     }
 
-    // Handle IOS_ENABLE_APPLE_SIGNIN
+    // Handle IOS_ENABLE_APPLE_SIGNIN:
+    // Adds the Apple Sign-In entitlement to both Debug and Release entitlements plists,
+    // enabling the "Sign in with Apple" capability in the Xcode project.
     if (pluginVariables["IOS_ENABLE_APPLE_SIGNIN"] === "true") {
         try {
             var entitlementsDebugPath = path.join(iosPlatformPath, appName, "Entitlements-Debug.plist");
@@ -97,7 +133,9 @@ module.exports = function(context) {
         }
     }
 
-    // Handle IOS_GOOGLE_SIGIN_VERSION in Podfile
+    // Handle IOS_GOOGLE_SIGIN_VERSION:
+    // Overrides the GoogleSignIn pod version in the Podfile to the version
+    // specified by the plugin variable, allowing users to pin a specific version.
     if (pluginVariables["IOS_GOOGLE_SIGIN_VERSION"]) {
         try {
             var podFilePath = path.join(iosPlatformPath, "Podfile");
