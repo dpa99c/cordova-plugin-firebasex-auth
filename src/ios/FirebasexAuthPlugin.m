@@ -1,3 +1,13 @@
+/**
+ * @file FirebasexAuthPlugin.m
+ * @brief Implementation of the Firebase Authentication Cordova plugin on iOS.
+ *
+ * Provides comprehensive Firebase Authentication functionality including email/password,
+ * phone number, anonymous sign-in, custom tokens, and OAuth providers (Google via Google Sign-In SDK,
+ * Apple via ASAuthorizationController, Microsoft/Facebook/generic OAuth via Firebase OAuthProvider).
+ * Also supports multi-factor authentication (MFA) enrollment and verification, credential management,
+ * user profile operations, and auth state/ID token change listeners.
+ */
 #import "FirebasexAuthPlugin.h"
 #import "FirebasexCorePlugin.h"
 #import <CommonCrypto/CommonDigest.h>
@@ -5,14 +15,23 @@
 @import FirebaseAuth;
 @import GoogleSignIn;
 
+/** Singleton instance of the auth plugin. */
 static FirebasexAuthPlugin* authPluginInstance;
 
 @implementation FirebasexAuthPlugin
 
+/**
+ * Returns the singleton instance of this plugin.
+ */
 + (FirebasexAuthPlugin*)instance {
     return authPluginInstance;
 }
 
+/**
+ * Initializes the plugin by storing the singleton reference, creating the credentials dictionary,
+ * and registering Firebase Auth state change and ID token change listeners that forward events
+ * to JavaScript via the core plugin's global JavaScript executor.
+ */
 - (void)pluginInitialize {
     authPluginInstance = self;
     self.authCredentials = [NSMutableDictionary dictionary];
@@ -42,6 +61,13 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - Phone / MFA
 
+/**
+ * Verifies a phone number for phone-based authentication.
+ * Initiates an SMS verification flow via the Firebase Phone Auth provider.
+ * Returns a verification ID for manual code entry on iOS (no instant verification).
+ *
+ * @param command Cordova command with args: [phoneNumber].
+ */
 - (void)verifyPhoneNumber:(CDVInvokedUrlCommand*)command {
     NSString* phoneNumber = [command.arguments objectAtIndex:0];
     [self.commandDelegate runInBackground:^{
@@ -64,6 +90,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Enrolls a phone number as a second authentication factor for the current user.
+ * Opens a multi-factor session, verifies the phone number, and returns a verification ID.
+ *
+ * @param command Cordova command with args: [phoneNumber, displayName].
+ */
 - (void)enrollSecondAuthFactor:(CDVInvokedUrlCommand*)command {
     NSString* phoneNumber = [command.arguments objectAtIndex:0];
     NSString* displayName = [command.arguments objectAtIndex:1];
@@ -97,6 +129,13 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Verifies a second authentication factor during an MFA challenge or enrollment.
+ * If a multi-factor resolver is active, resolves the sign-in challenge.
+ * Otherwise, enrolls the factor for the current user.
+ *
+ * @param command Cordova command with args: [verificationId, code].
+ */
 - (void)verifySecondAuthFactor:(CDVInvokedUrlCommand*)command {
     NSString* verificationId = [command.arguments objectAtIndex:0];
     NSString* code = [command.arguments objectAtIndex:1];
@@ -131,6 +170,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Lists the second authentication factors enrolled for the current user.
+ * Returns an array of factor info objects with index, phoneNumber, and displayName.
+ *
+ * @param command Cordova command (no arguments).
+ */
 - (void)listEnrolledSecondAuthFactors:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -150,6 +195,11 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Removes an enrolled second authentication factor from the current user by index.
+ *
+ * @param command Cordova command with args: [selectedIndex].
+ */
 - (void)unenrollSecondAuthFactor:(CDVInvokedUrlCommand*)command {
     NSNumber* selectedIndex = [command.arguments objectAtIndex:0];
     [self.commandDelegate runInBackground:^{
@@ -184,6 +234,11 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - Language
 
+/**
+ * Sets the language code for Firebase Auth to use when sending emails and SMS messages.
+ *
+ * @param command Cordova command with args: [languageCode].
+ */
 - (void)setLanguageCode:(CDVInvokedUrlCommand*)command {
     NSString* lang = [command.arguments objectAtIndex:0];
     [self.commandDelegate runInBackground:^{
@@ -213,6 +268,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Signs in an existing user with the given email and password.
+ * Returns user info on success or an error result supporting MFA challenges.
+ *
+ * @param command Cordova command with args: [email, password].
+ */
 - (void)signInUserWithEmailAndPassword:(CDVInvokedUrlCommand*)command {
     NSString* email = [command.arguments objectAtIndex:0];
     NSString* password = [command.arguments objectAtIndex:1];
@@ -227,6 +288,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Authenticates a user with email and password and returns a Firebase Auth credential
+ * without actually signing in. Useful for re-authentication or linking flows.
+ *
+ * @param command Cordova command with args: [email, password].
+ */
 - (void)authenticateUserWithEmailAndPassword:(CDVInvokedUrlCommand*)command {
     NSString* email = [command.arguments objectAtIndex:0];
     NSString* password = [command.arguments objectAtIndex:1];
@@ -247,6 +314,12 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - Custom token & anonymous
 
+/**
+ * Signs in a user with a custom token generated by a server.
+ * Returns user info on success.
+ *
+ * @param command Cordova command with args: [customToken].
+ */
 - (void)signInUserWithCustomToken:(CDVInvokedUrlCommand*)command {
     NSString* customToken = [command.arguments objectAtIndex:0];
     [self.commandDelegate runInBackground:^{
@@ -260,6 +333,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Signs in the user anonymously. Creates a new anonymous account if none exists.
+ * Returns user info on success.
+ *
+ * @param command Cordova command (no arguments).
+ */
 - (void)signInUserAnonymously:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -274,6 +353,13 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - OAuth Providers
 
+/**
+ * Authenticates the user with Google Sign-In using the GIDSignIn SDK.
+ * Presents the Google Sign-In UI, obtains Google OAuth tokens, creates a
+ * Firebase credential, and optionally signs in or saves the credential.
+ *
+ * @param command Cordova command with args: [signIn] where signIn is a boolean.
+ */
 - (void)authenticateUserWithGoogle:(CDVInvokedUrlCommand*)command {
     NSString* clientId = [command.arguments objectAtIndex:0];
     BOOL signIn = YES;
@@ -318,6 +404,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }
 }
 
+/**
+ * Authenticates the user with Apple Sign-In.
+ * Stores the callback ID and initiates the Apple Sign-In flow.
+ *
+ * @param command Cordova command with args: [signIn, locale].
+ */
 - (void)authenticateUserWithApple:(CDVInvokedUrlCommand*)command {
     @try {
         self.appleSignInCallbackId = command.callbackId;
@@ -327,6 +419,11 @@ static FirebasexAuthPlugin* authPluginInstance;
     }
 }
 
+/**
+ * Authenticates the user with Microsoft via Firebase OAuthProvider.
+ *
+ * @param command Cordova command with args: [signIn, locale].
+ */
 - (void)authenticateUserWithMicrosoft:(CDVInvokedUrlCommand*)command {
     @try {
         NSString* providerId = @"microsoft.com";
@@ -344,6 +441,11 @@ static FirebasexAuthPlugin* authPluginInstance;
     }
 }
 
+/**
+ * Authenticates the user with Facebook via Firebase OAuthProvider.
+ *
+ * @param command Cordova command with args: [signIn].
+ */
 - (void)authenticateUserWithFacebook:(CDVInvokedUrlCommand*)command {
     @try {
         NSString* accessToken = [command.arguments objectAtIndex:0];
@@ -359,6 +461,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }
 }
 
+/**
+ * Authenticates the user with a generic OAuth provider via Firebase OAuthProvider.
+ * Supports custom parameters and scopes.
+ *
+ * @param command Cordova command with args: [providerId, signIn, customParametersJson, scopesArray].
+ */
 - (void)authenticateUserWithOAuth:(CDVInvokedUrlCommand*)command {
     @try {
         NSString* providerId = [command.arguments objectAtIndex:0];
@@ -371,6 +479,16 @@ static FirebasexAuthPlugin* authPluginInstance;
     }
 }
 
+/**
+ * Internal helper that performs OAuth authentication using Firebase OAuthProvider.
+ * Configures custom parameters and scopes, then presents the auth flow.
+ * On success, optionally signs in or saves the credential.
+ *
+ * @param providerId The OAuth provider identifier (e.g., "microsoft.com").
+ * @param customParameters Dictionary of custom OAuth parameters, or nil.
+ * @param scopes Array of OAuth scope strings, or nil.
+ * @param command The originating Cordova command.
+ */
 - (void)authenticateWithOAuth:(NSString*)providerId customParameters:(NSDictionary*)customParameters scopes:(NSArray*)scopes command:(CDVInvokedUrlCommand*)command {
     @try {
         self.oauthProvider = [FIROAuthProvider providerWithProviderID:providerId];
@@ -419,6 +537,13 @@ static FirebasexAuthPlugin* authPluginInstance;
     [authorizationController performRequests];
 }
 
+/**
+ * Hashes a string using SHA-256 and returns it as a hex-encoded string.
+ * Used to hash the nonce for Apple Sign-In.
+ *
+ * @param input The string to hash.
+ * @return Hex-encoded SHA-256 hash.
+ */
 - (NSString*)stringBySha256HashingString:(NSString*)input {
     const char* string = [input UTF8String];
     unsigned char result[CC_SHA256_DIGEST_LENGTH];
@@ -431,6 +556,13 @@ static FirebasexAuthPlugin* authPluginInstance;
     return hashed;
 }
 
+/**
+ * Generates a cryptographically random nonce string of the specified length.
+ * Uses characters [0-9a-zA-Z] and SecRandomCopyBytes for security.
+ *
+ * @param length The desired nonce length.
+ * @return A random alphanumeric nonce string.
+ */
 - (NSString*)randomNonce:(NSInteger)length {
     NSAssert(length > 0, @"Expected nonce to have positive length");
     NSString* charset = @"0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._";
@@ -461,6 +593,14 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - ASAuthorizationControllerDelegate
 
+/**
+ * Called when Apple Sign-In authorization completes successfully.
+ * Extracts the Apple ID credential (identity token, authorization code, full name),
+ * creates a Firebase OAuthCredential with the nonce, and resolves the stored callback.
+ *
+ * @param controller The authorization controller.
+ * @param authorization The authorization result containing the credential.
+ */
 - (void)authorizationController:(ASAuthorizationController*)controller didCompleteWithAuthorization:(ASAuthorization*)authorization {
     if ([authorization.credential isKindOfClass:[ASAuthorizationAppleIDCredential class]]) {
         ASAuthorizationAppleIDCredential* appleIDCredential = (ASAuthorizationAppleIDCredential*)authorization.credential;
@@ -505,6 +645,13 @@ static FirebasexAuthPlugin* authPluginInstance;
     }
 }
 
+/**
+ * Called when Apple Sign-In authorization fails.
+ * Sends an error result back to the stored callback.
+ *
+ * @param controller The authorization controller.
+ * @param error The authorization error.
+ */
 - (void)authorizationController:(ASAuthorizationController*)controller didCompleteWithError:(NSError*)error {
     NSLog(@"[FirebasexAuth] Apple Sign in failed: %@", error.localizedDescription);
     if (self.appleSignInCallbackId) {
@@ -514,12 +661,24 @@ static FirebasexAuthPlugin* authPluginInstance;
     }
 }
 
+/**
+ * Provides the presentation anchor (window) for the ASAuthorizationController.
+ *
+ * @param controller The authorization controller.
+ * @return The key window for presenting the authorization UI.
+ */
 - (ASPresentationAnchor)presentationAnchorForAuthorizationController:(ASAuthorizationController*)controller {
     return self.viewController.view.window;
 }
 
 #pragma mark - Credential operations
 
+/**
+ * Signs in the user using a previously saved Firebase Auth credential.
+ * Retrieves the credential by key and calls signInWithCredential.
+ *
+ * @param command Cordova command with args: [credentialKey].
+ */
 - (void)signInWithCredential:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -537,6 +696,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Links a previously saved credential to the currently signed-in user.
+ * This adds an additional authentication provider to the user account.
+ *
+ * @param command Cordova command with args: [credentialKey].
+ */
 - (void)linkUserWithCredential:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -557,6 +722,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Re-authenticates the current user with a previously saved credential.
+ * Required before security-sensitive operations like password change or account deletion.
+ *
+ * @param command Cordova command with args: [credentialKey].
+ */
 - (void)reauthenticateWithCredential:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -577,6 +748,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Unlinks an authentication provider from the current user.
+ * Removes the provider identified by the given provider ID.
+ *
+ * @param command Cordova command with args: [providerId].
+ */
 - (void)unlinkUserWithProvider:(CDVInvokedUrlCommand*)command {
     NSString* providerId = [command.arguments objectAtIndex:0];
     [self.commandDelegate runInBackground:^{
@@ -600,6 +777,12 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - Session
 
+/**
+ * Checks whether a user is currently signed in.
+ * Returns a boolean true/false to the callback.
+ *
+ * @param command Cordova command (no arguments).
+ */
 - (void)isUserSignedIn:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -612,6 +795,11 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Signs out the current user from Firebase Auth and Google Sign-In.
+ *
+ * @param command Cordova command (no arguments).
+ */
 - (void)signOutUser:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -631,6 +819,12 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - User Info
 
+/**
+ * Returns the profile information of the currently signed-in user.
+ * Includes name, email, phone, photo URL, UID, provider data, and ID token.
+ *
+ * @param command Cordova command (no arguments).
+ */
 - (void)getCurrentUser:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -644,6 +838,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Reloads the current user's profile data from the Firebase server
+ * and returns the refreshed user info.
+ *
+ * @param command Cordova command (no arguments).
+ */
 - (void)reloadCurrentUser:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -668,6 +868,14 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Extracts user profile information and returns it as a dictionary to the callback.
+ * Includes display name, email, phone, photo URL, UID, anonymous status, metadata timestamps,
+ * provider data array, ID token, and sign-in provider.
+ *
+ * @param user The Firebase user to extract info from.
+ * @param command The originating Cordova command.
+ */
 - (void)extractAndReturnUserInfo:(FIRUser*)user command:(CDVInvokedUrlCommand*)command {
     NSMutableDictionary* result = [NSMutableDictionary dictionary];
     [result setValue:user.displayName forKey:@"name"];
@@ -709,6 +917,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Converts an NSDate to a millisecond timestamp (NSNumber).
+ *
+ * @param date The date to convert, or nil.
+ * @return Milliseconds since epoch, or nil if date is nil.
+ */
 - (NSNumber*)getTimestampFromDate:(NSDate*)date {
     if (date == nil) return nil;
     return @([date timeIntervalSince1970] * 1000);
@@ -716,6 +930,11 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - User Management
 
+/**
+ * Updates the current user's profile (display name and/or photo URL).
+ *
+ * @param command Cordova command with args: [{name, photoUri}].
+ */
 - (void)updateUserProfile:(CDVInvokedUrlCommand*)command {
     NSDictionary* profile = [command.arguments objectAtIndex:0];
     [self.commandDelegate runInBackground:^{
@@ -746,6 +965,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Updates the current user's email address.
+ * Sends a verification email before updating.
+ *
+ * @param command Cordova command with args: [email].
+ */
 - (void)updateUserEmail:(CDVInvokedUrlCommand*)command {
     NSString* email = [command.arguments objectAtIndex:0];
     [self.commandDelegate runInBackground:^{
@@ -767,6 +992,13 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Sends an email verification to the current user.
+ * Optionally accepts ActionCodeSettings for customizing the verification email
+ * (URL, handleCodeInApp, iOS bundleId, Android packageName, dynamicLinkDomain).
+ *
+ * @param command Cordova command with optional args: [actionCodeSettings].
+ */
 - (void)sendUserEmailVerification:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -811,6 +1043,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Sends a verification email before updating the user's email to the new address.
+ * Optionally accepts ActionCodeSettings for customizing the email.
+ *
+ * @param command Cordova command with args: [email, actionCodeSettings?].
+ */
 - (void)verifyBeforeUpdateEmail:(CDVInvokedUrlCommand*)command {
     NSString* email = [command.arguments objectAtIndex:0];
     [self.commandDelegate runInBackground:^{
@@ -848,6 +1086,11 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Updates the current user's password.
+ *
+ * @param command Cordova command with args: [newPassword].
+ */
 - (void)updateUserPassword:(CDVInvokedUrlCommand*)command {
     NSString* password = [command.arguments objectAtIndex:0];
     [self.commandDelegate runInBackground:^{
@@ -869,6 +1112,11 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Sends a password reset email to the specified email address.
+ *
+ * @param command Cordova command with args: [email].
+ */
 - (void)sendUserPasswordResetEmail:(CDVInvokedUrlCommand*)command {
     NSString* email = [command.arguments objectAtIndex:0];
     [self.commandDelegate runInBackground:^{
@@ -887,6 +1135,11 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Deletes the currently signed-in user account from Firebase.
+ *
+ * @param command Cordova command (no arguments).
+ */
 - (void)deleteUser:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -909,6 +1162,11 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - Config
 
+/**
+ * Configures Firebase Auth to connect to the Auth emulator for local development.
+ *
+ * @param command Cordova command with args: [host, port].
+ */
 - (void)useAuthEmulator:(CDVInvokedUrlCommand*)command {
     NSString* host = [command.arguments objectAtIndex:0];
     NSNumber* port = [command.arguments objectAtIndex:1];
@@ -923,6 +1181,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     }];
 }
 
+/**
+ * Retrieves the custom claims from the current user's ID token.
+ * Returns a dictionary of claim key-value pairs.
+ *
+ * @param command Cordova command (no arguments).
+ */
 - (void)getClaims:(CDVInvokedUrlCommand*)command {
     [self.commandDelegate runInBackground:^{
         @try {
@@ -945,6 +1209,13 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - Auth Result Handling
 
+/**
+ * Converts an array of FIRMultiFactorInfo objects to a JSON-compatible array of dictionaries.
+ * Each entry contains index, optional displayName, and phoneNumber.
+ *
+ * @param multiFactorInfos Array of enrolled multi-factor info objects.
+ * @return Array of dictionaries representing the enrolled factors.
+ */
 - (NSMutableArray*)parseEnrolledSecondFactorsToJson:(NSArray*)multiFactorInfos {
     NSMutableArray* secondFactors = [NSMutableArray new];
     int index = 0;
@@ -965,6 +1236,15 @@ static FirebasexAuthPlugin* authPluginInstance;
     return secondFactors;
 }
 
+/**
+ * Handles the result of a Firebase Auth operation.
+ * On success, sends OK with true. On error, delegates to createAuthErrorResult
+ * for specialized MFA or credential-already-in-use handling.
+ *
+ * @param authResult The auth data result (may be nil on error).
+ * @param error The error (nil on success).
+ * @param command The originating Cordova command.
+ */
 - (void)handleAuthResult:(FIRAuthDataResult*)authResult error:(NSError*)error command:(CDVInvokedUrlCommand*)command {
     @try {
         CDVPluginResult* pluginResult;
@@ -981,6 +1261,17 @@ static FirebasexAuthPlugin* authPluginInstance;
     }
 }
 
+/**
+ * Creates an error plugin result for auth failures.
+ * Handles two special cases:
+ * - FIRAuthErrorCodeSecondFactorRequired: stores the multi-factor resolver and returns
+ *   the enrolled second factors for the client to resolve.
+ * - FIRAuthErrorCodeCredentialAlreadyInUse: returns detailed error info including
+ *   the updated credential for account linking.
+ *
+ * @param error The authentication error.
+ * @return A CDVPluginResult with error status and appropriate error details.
+ */
 - (CDVPluginResult*)createAuthErrorResult:(NSError*)error {
     CDVPluginResult* pluginResult;
     if (error.code == FIRAuthErrorCodeSecondFactorRequired) {
@@ -1034,12 +1325,29 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - Auth Credential Management
 
+/**
+ * Stores a Firebase Auth credential in the plugin's credential dictionary.
+ * Returns a numeric key that can be used to retrieve the credential later.
+ *
+ * @param credential The Firebase Auth credential to store.
+ * @return A numeric key identifying the stored credential.
+ */
 - (NSNumber*)saveAuthCredential:(FIRAuthCredential*)credential {
     NSNumber* key = [self generateId];
     [self.authCredentials setObject:credential forKey:key];
     return key;
 }
 
+/**
+ * Retrieves a Firebase Auth credential from the stored credentials or constructs
+ * a phone auth credential from verificationId/code pairs.
+ * Supports two argument formats:
+ * - {id: "key"} — retrieves a previously saved native credential.
+ * - {verificationId: "...", code: "..."} — creates a phone auth credential.
+ *
+ * @param command Cordova command with args: [credentialObject].
+ * @return The Firebase Auth credential, or nil on failure.
+ */
 - (FIRAuthCredential*)obtainAuthCredential:(CDVInvokedUrlCommand*)command {
     @try {
         id arg = [command.arguments objectAtIndex:0];
@@ -1079,10 +1387,22 @@ static FirebasexAuthPlugin* authPluginInstance;
     return nil;
 }
 
+/**
+ * Checks whether a user is currently signed in to Firebase Auth.
+ *
+ * @return YES if a user is signed in, NO otherwise.
+ */
 - (BOOL)isSignedIn {
     return [FIRAuth auth].currentUser != nil;
 }
 
+/**
+ * Checks if no user is signed in and sends an error if so.
+ * Convenience method for guarding operations that require an authenticated user.
+ *
+ * @param command The Cordova command to send an error to if not signed in.
+ * @return YES if no user is signed in (error was sent), NO if a user is signed in.
+ */
 - (BOOL)userNotSignedInError:(CDVInvokedUrlCommand*)command {
     if (![self isSignedIn]) {
         [self sendErrorMessage:@"No user is currently signed in" command:command];
@@ -1091,6 +1411,12 @@ static FirebasexAuthPlugin* authPluginInstance;
     return NO;
 }
 
+/**
+ * Generates a unique random numeric key for storing auth credentials.
+ * Ensures uniqueness by checking against existing keys in the credentials dictionary.
+ *
+ * @return A unique NSNumber key.
+ */
 - (NSNumber*)generateId {
     NSNumber* key;
     do {
@@ -1101,16 +1427,35 @@ static FirebasexAuthPlugin* authPluginInstance;
 
 #pragma mark - Utility Methods
 
+/**
+ * Sends an error result with the localized error description.
+ *
+ * @param error The NSError to report.
+ * @param command The originating Cordova command.
+ */
 - (void)sendErrorResult:(NSError*)error command:(CDVInvokedUrlCommand*)command {
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error.localizedDescription];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
+/**
+ * Sends an error result with a custom error message string.
+ *
+ * @param message The error message to report.
+ * @param command The originating Cordova command.
+ */
 - (void)sendErrorMessage:(NSString*)message command:(CDVInvokedUrlCommand*)command {
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:message];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
+/**
+ * Sends an error result with the exception reason string.
+ * Also logs the exception to the console.
+ *
+ * @param exception The NSException to report.
+ * @param command The originating Cordova command.
+ */
 - (void)sendExceptionResult:(NSException*)exception command:(CDVInvokedUrlCommand*)command {
     NSLog(@"[FirebasexAuth] Exception: %@", exception);
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:exception.reason];
