@@ -14,12 +14,20 @@
  * - `IOS_GOOGLE_SIGIN_VERSION`: When set, overrides the GoogleSignIn pod version in the
  *   Podfile to the specified semantic version.
  *
- * Plugin variables are resolved from the hook context's plugin info (defaults) and
- * CLI variables (overrides).
+ * Plugin variables are resolved using a 4-layer override strategy:
+ * 1. Defaults from plugin.xml preferences (via hook context).
+ * 2. Overrides from `config.xml` `<plugin><variable>` elements (wrapper and own plugin ID).
+ * 3. Overrides from `package.json` `cordova.plugins` entries (wrapper and own plugin ID).
+ * 4. CLI variables passed at install time (highest priority).
  */
 var fs = require("fs");
 var path = require("path");
 var plist = require("plist");
+
+/** @constant {string} The plugin identifier. */
+var PLUGIN_ID = "cordova-plugin-firebasex-auth";
+/** @constant {string} The wrapper meta-plugin identifier used as a fallback source for plugin variables. */
+var WRAPPER_PLUGIN_ID = "cordova-plugin-firebasex";
 
 /**
  * Cordova hook entry point.
@@ -45,7 +53,48 @@ module.exports = function(context) {
         });
     }
 
-    // Override with any user-specified variable values
+    // Override with values from config.xml (check both wrapper and own plugin ID)
+    try {
+        var configXmlPath = path.join(context.opts.projectRoot, "config.xml");
+        if (fs.existsSync(configXmlPath)) {
+            var configXml = fs.readFileSync(configXmlPath, "utf-8");
+            [WRAPPER_PLUGIN_ID, PLUGIN_ID].forEach(function(pluginId) {
+                var pluginRegex = new RegExp('<plugin[^>]+name="' + pluginId + '"[^>]*>(.*?)</plugin>', "s");
+                var pluginMatch = configXml.match(pluginRegex);
+                if (pluginMatch) {
+                    var varRegex = /<variable\s+name="([^"]+)"\s+value="([^"]+)"\s*\/>/g;
+                    var varMatch;
+                    while ((varMatch = varRegex.exec(pluginMatch[1])) !== null) {
+                        pluginVariables[varMatch[1]] = varMatch[2];
+                    }
+                }
+            });
+        }
+    } catch (e) {
+        console.warn("[FirebasexAuth] Could not read config.xml for plugin variables: " + e.message);
+    }
+
+    // Override with values from package.json (check wrapper first as base, then own plugin)
+    try {
+        var packageJsonPath = path.join(context.opts.projectRoot, "package.json");
+        if (fs.existsSync(packageJsonPath)) {
+            var packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+            if (packageJson.cordova && packageJson.cordova.plugins) {
+                [WRAPPER_PLUGIN_ID, PLUGIN_ID].forEach(function(pluginId) {
+                    if (packageJson.cordova.plugins[pluginId]) {
+                        var pluginVars = packageJson.cordova.plugins[pluginId];
+                        for (var key in pluginVars) {
+                            pluginVariables[key] = pluginVars[key];
+                        }
+                    }
+                });
+            }
+        }
+    } catch (e) {
+        console.warn("[FirebasexAuth] Could not read package.json for plugin variables: " + e.message);
+    }
+
+    // Override with any user-specified CLI variable values (highest priority)
     if(context.opts && context.opts.cli_variables){
         Object.keys(context.opts.cli_variables).forEach(function(key){
             pluginVariables[key] = context.opts.cli_variables[key];
