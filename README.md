@@ -1,8 +1,8 @@
-# cordova-plugin-firebasex-auth
-
-[![npm version](https://img.shields.io/npm/v/cordova-plugin-firebasex-auth.svg)](https://www.npmjs.com/package/cordova-plugin-firebasex-auth)
+# cordova-plugin-firebasex-auth[![Latest Stable Version](https://img.shields.io/npm/v/cordova-plugin-firebasex-auth.svg)](https://www.npmjs.com/package/cordova-plugin-firebasex-auth)
 
 Firebase Authentication module for the [modular FirebaseX Cordova plugin suite](https://github.com/dpa99c/cordova-plugin-firebasex#modular-plugins).
+
+This plugin wraps the [Firebase Authentication SDK](https://firebase.google.com/docs/auth) and provides methods to authenticate users using email/password, phone number, and federated identity providers such as Google, Facebook and Apple.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
