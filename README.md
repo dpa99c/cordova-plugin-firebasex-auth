@@ -83,6 +83,11 @@ Or in your `config.xml`:
 
 | Variable | Default | Description |
 |---|---|---|
+| `ANDROID_FIREBASE_AUTH_VERSION` | `24.0.1` | Android Firebase Auth SDK version. |
+| `ANDROID_PLAY_SERVICES_AUTH_VERSION` | `21.3.0` | Android Play Services Auth version. |
+| `ANDROID_CREDENTIALS_VERSION` | `1.3.0` | AndroidX Credentials library version. |
+| `ANDROID_GOOGLEID_VERSION` | `1.1.1` | Google Identity library version. |
+| `IOS_FIREBASE_SDK_VERSION` | `12.9.0` | iOS Firebase SDK version (for auth pod). |
 | `SETUP_RECAPTCHA_VERIFICATION` | `false` | Set to `true` to automatically add the `REVERSED_CLIENT_ID` from `GoogleService-Info.plist` to the list of custom URL schemes for reCAPTCHA verification on iOS. See [verifyPhoneNumber - iOS](#ios) for more info. |
 | `IOS_ENABLE_APPLE_SIGNIN` | `false` | Set to `true` to add the Apple Sign-In entitlement to your iOS app. See [authenticateUserWithApple](#authenticateuserwithapple) for more info. |
 | `IOS_GOOGLE_SIGIN_VERSION` | `9.0.0` | Google Sign-In iOS SDK version |
