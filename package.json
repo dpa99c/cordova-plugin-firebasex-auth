@@ -31,6 +31,6 @@
     }
   },
   "dependencies": {
-    "cordova-plugin-firebasex-core": ">=1.0.0"
+    "plist": "^3.0.1"
   }
 }

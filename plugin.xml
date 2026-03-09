@@ -68,13 +68,14 @@
                 <source url="https://cdn.cocoapods.org/" />
             </config>
             <pods use-frameworks="true">
-                <pod name="FirebaseAuth" spec="$IOS_FIREBASE_SDK_VERSION" />
-                <pod name="GoogleSignIn" spec="$IOS_GOOGLE_SIGIN_VERSION" />
+                <pod name="FirebaseAuth" spec="12.9.0" />
+                <pod name="GoogleSignIn" spec="9.0.0" />
             </pods>
         </podspec>
 
         <framework src="AuthenticationServices.framework" />
 
+        <hook src="scripts/ios/before_plugin_install.js" type="before_plugin_install" />
         <hook src="scripts/ios/after_plugin_install.js" type="after_plugin_install" />
         <hook src="scripts/ios/before_plugin_uninstall.js" type="before_plugin_uninstall" />
     </platform>

@@ -212,4 +212,35 @@ module.exports = function(context) {
             console.warn("[FirebasexAuth] Error setting Google Sign-In version: " + e.message);
         }
     }
+
+    // Handle IOS_FIREBASE_SDK_VERSION:
+    // Overrides the FirebaseAuth pod version in the Podfile to the version
+    // specified by the plugin variable.
+    if (pluginVariables["IOS_FIREBASE_SDK_VERSION"]) {
+        try {
+            var podFilePath = path.join(iosPlatformPath, "Podfile");
+            if (fs.existsSync(podFilePath)) {
+                var podFileContents = fs.readFileSync(podFilePath, "utf-8");
+                var versionRegex = /\d+\.\d+\.\d+[^'"]*/;
+                var firebaseAuthPodRegEx = /pod 'FirebaseAuth', '(\d+\.\d+\.\d+[^'"]*)'/g;
+                var matches = podFileContents.match(firebaseAuthPodRegEx);
+                if (matches) {
+                    var modified = false;
+                    matches.forEach(function(match) {
+                        var currentVersion = match.match(versionRegex)[0];
+                        if (currentVersion !== pluginVariables["IOS_FIREBASE_SDK_VERSION"]) {
+                            podFileContents = podFileContents.replace(match, match.replace(currentVersion, pluginVariables["IOS_FIREBASE_SDK_VERSION"]));
+                            modified = true;
+                        }
+                    });
+                    if (modified) {
+                        fs.writeFileSync(podFilePath, podFileContents);
+                        console.log("[FirebasexAuth] Firebase Auth version set to v" + pluginVariables["IOS_FIREBASE_SDK_VERSION"] + " in Podfile");
+                    }
+                }
+            }
+        } catch(e) {
+            console.warn("[FirebasexAuth] Error setting Firebase Auth version: " + e.message);
+        }
+    }
 };
