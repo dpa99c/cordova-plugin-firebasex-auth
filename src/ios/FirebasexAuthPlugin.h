@@ -139,7 +139,7 @@
  * @param error The auth error.
  * @return A CDVPluginResult with error status.
  */
-- (NSDictionary*)createAuthErrorResult:(NSError*)error;
+- (CDVPluginResult*)createAuthErrorResult:(NSError*)error;
 
 /**
  * Stores an auth credential and returns its numeric key for later retrieval.

@@ -37,7 +37,7 @@ static FirebasexAuthPlugin* authPluginInstance;
     self.authCredentials = [NSMutableDictionary dictionary];
 
     @try {
-        [[FIRAuth auth] addAuthStateDidChangeListener:^(FIRAuth * _Nonnull auth, FIRUser * _Nullable user) {
+        (void)[[FIRAuth auth] addAuthStateDidChangeListener:^(FIRAuth * _Nonnull auth, FIRUser * _Nullable user) {
             BOOL isSignedIn = user != nil;
             NSString* js = [NSString stringWithFormat:@"if(typeof(FirebasexAuth) !== 'undefined' && typeof(FirebasexAuth._onAuthStateChange) === 'function'){FirebasexAuth._onAuthStateChange(%@)}", isSignedIn ? @"true": @"false"];
             FirebasexCorePlugin* core = [FirebasexCorePlugin sharedInstance];
@@ -46,7 +46,7 @@ static FirebasexAuthPlugin* authPluginInstance;
             }
         }];
 
-        [[FIRAuth auth] addIDTokenDidChangeListener:^(FIRAuth * _Nonnull auth, FIRUser * _Nullable user) {
+        (void)[[FIRAuth auth] addIDTokenDidChangeListener:^(FIRAuth * _Nonnull auth, FIRUser * _Nullable user) {
             BOOL isSignedIn = user != nil;
             NSString* js = [NSString stringWithFormat:@"if(typeof(FirebasexAuth) !== 'undefined' && typeof(FirebasexAuth._onAuthIdTokenChange) === 'function'){FirebasexAuth._onAuthIdTokenChange(%@)}", isSignedIn ? @"true": @"false"];
             FirebasexCorePlugin* core = [FirebasexCorePlugin sharedInstance];
@@ -98,7 +98,6 @@ static FirebasexAuthPlugin* authPluginInstance;
  */
 - (void)enrollSecondAuthFactor:(CDVInvokedUrlCommand*)command {
     NSString* phoneNumber = [command.arguments objectAtIndex:0];
-    NSString* displayName = [command.arguments objectAtIndex:1];
     [self.commandDelegate runInBackground:^{
         @try {
             FIRUser* user = [FIRAuth auth].currentUser;
@@ -1023,15 +1022,12 @@ static FirebasexAuthPlugin* authPluginInstance;
                     settings.handleCodeInApp = [settingsDict[@"handleCodeInApp"] boolValue];
                 }
                 if (settingsDict[@"iOS"]) {
-                    settings.IOSBundleID = settingsDict[@"iOS"][@"bundleId"];
+                    settings.iOSBundleID = settingsDict[@"iOS"][@"bundleId"];
                 }
                 if (settingsDict[@"android"]) {
                     [settings setAndroidPackageName:settingsDict[@"android"][@"packageName"]
                                     installIfNotAvailable:[settingsDict[@"android"][@"installApp"] boolValue]
                                     minimumVersion:settingsDict[@"android"][@"minimumVersion"]];
-                }
-                if (settingsDict[@"dynamicLinkDomain"]) {
-                    settings.dynamicLinkDomain = settingsDict[@"dynamicLinkDomain"];
                 }
                 [user sendEmailVerificationWithActionCodeSettings:settings completion:completionBlock];
             } else {
@@ -1072,9 +1068,6 @@ static FirebasexAuthPlugin* authPluginInstance;
                 settings.URL = [NSURL URLWithString:settingsDict[@"url"]];
                 if (settingsDict[@"handleCodeInApp"]) {
                     settings.handleCodeInApp = [settingsDict[@"handleCodeInApp"] boolValue];
-                }
-                if (settingsDict[@"dynamicLinkDomain"]) {
-                    settings.dynamicLinkDomain = settingsDict[@"dynamicLinkDomain"];
                 }
                 [user sendEmailVerificationBeforeUpdatingEmail:email actionCodeSettings:settings completion:completionBlock];
             } else {
