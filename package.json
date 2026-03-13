@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-firebasex-auth",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Firebase Authentication for Cordova - modular plugin extracted from cordova-plugin-firebasex",
   "cordova": {
     "id": "cordova-plugin-firebasex-auth",
@@ -17,9 +17,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/nicerapp/cordova-plugin-firebasex-auth.git"
+    "url": "https://github.com/dpa99c/cordova-plugin-firebasex-auth.git"
   },
-  "author": "",
+  "author": "Dave Alden",
   "license": "MIT",
   "engines": {
     "cordovaDependencies": {
