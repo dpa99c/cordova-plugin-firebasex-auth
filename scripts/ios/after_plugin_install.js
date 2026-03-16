@@ -29,6 +29,31 @@ var PLUGIN_ID = "cordova-plugin-firebasex-auth";
 /** @constant {string} The wrapper meta-plugin identifier used as a fallback source for plugin variables. */
 var WRAPPER_PLUGIN_ID = "cordova-plugin-firebasex";
 
+/** @constant {string} The expected app's Xcode name under `platforms/ios`. Since cordova-ios 8, this is `App`; in cordova <= 7 this was the project name. */
+var appNameCordova8Plus = "App";
+
+/***************************
+ * Internal helper functions
+ ****************************/
+
+/**
+ * Supports both the legacy cordova-ios layout (where the Xcode project is under `platforms/ios/<AppName>.xcodeproj`)
+ * and the new cordova-ios 8+ layout (where the Xcode project is under `platforms/ios/App/App.xcodeproj`)
+ * by checking for the existence of the new layout first, then falling back to the old layout if not found.
+ *
+ * @param {string} iosPlatformPath - Absolute path to `platforms/ios`.
+ * @param {string} appName - The resolved app name.
+ */
+function getAppSubDirPath(iosPlatformPath, appName) {
+    var newPath = path.join(iosPlatformPath, appNameCordova8Plus);
+    if (fs.existsSync(newPath)) {
+        return newPath;
+    }
+    return path.join(iosPlatformPath, appName);
+}
+
+
+
 /**
  * Cordova hook entry point.
  *
@@ -69,6 +94,8 @@ module.exports = function(context) {
                     }
                 }
             });
+        } else {
+            console.warn("[FirebasexAuth] config.xml not found at expected path: " + configXmlPath);
         }
     } catch (e) {
         console.warn("[FirebasexAuth] Could not read config.xml for plugin variables: " + e.message);
@@ -89,6 +116,8 @@ module.exports = function(context) {
                     }
                 });
             }
+        } else {
+            console.warn("[FirebasexAuth] package.json not found at expected path: " + packageJsonPath);
         }
     } catch (e) {
         console.warn("[FirebasexAuth] Could not read package.json for plugin variables: " + e.message);
@@ -102,19 +131,27 @@ module.exports = function(context) {
     }
 
     var iosPlatformPath = path.join(context.opts.projectRoot, "platforms", "ios");
+
+    // First try to resolve app name for cordova-ios 8+ by checking for the existence of the new layout with "App" subdirectory
     var appName;
-    try {
-        var configXmlPath = path.join(context.opts.projectRoot, "config.xml");
-        var configXml = fs.readFileSync(configXmlPath, "utf-8");
-        var nameMatch = configXml.match(/<name>([^<]+)<\/name>/);
-        appName = nameMatch ? nameMatch[1] : null;
-    } catch(e) {
-        console.warn("[FirebasexAuth] Could not read config.xml to get app name");
-        return;
+    var appSubDirPath = path.join(iosPlatformPath, appNameCordova8Plus);
+    if (fs.existsSync(appSubDirPath)) {
+        appName = appNameCordova8Plus;
+    } else {
+        // Try to resolve app name for cordova <= 7 from <name> in config.xml
+        try {
+            var configXmlPath = path.join(context.opts.projectRoot, "config.xml");
+            var configXml = fs.readFileSync(configXmlPath, "utf-8");
+            var nameMatch = configXml.match(/<name>([^<]+)<\/name>/);
+            appName = nameMatch ? nameMatch[1] : null;
+        } catch(e) {
+            console.warn("[FirebasexAuth] Could not read config.xml to get app name");
+            return;
+        }
     }
 
     if (!appName) {
-        console.warn("[FirebasexAuth] Could not determine app name from config.xml");
+        console.warn("[FirebasexAuth] Could not determine app name");
         return;
     }
 
@@ -123,12 +160,12 @@ module.exports = function(context) {
     // in the app's Info.plist, enabling reCAPTCHA-based phone authentication.
     if (pluginVariables["SETUP_RECAPTCHA_VERIFICATION"] === "true") {
         try {
-            var googlePlistPath = path.join(iosPlatformPath, appName, "GoogleService-Info.plist");
+            var googlePlistPath = path.join(getAppSubDirPath(iosPlatformPath, appName), "Resources", "GoogleService-Info.plist");
             if (fs.existsSync(googlePlistPath)) {
                 var googlePlist = plist.parse(fs.readFileSync(googlePlistPath, "utf-8"));
                 var reversedClientId = googlePlist["REVERSED_CLIENT_ID"];
                 if (reversedClientId) {
-                    var appPlistPath = path.join(iosPlatformPath, appName, appName + "-Info.plist");
+                    var appPlistPath = path.join(getAppSubDirPath(iosPlatformPath, appName), appName + "-Info.plist");
                     var appPlist = plist.parse(fs.readFileSync(appPlistPath, "utf-8"));
 
                     if (!appPlist["CFBundleURLTypes"]) appPlist["CFBundleURLTypes"] = [];
@@ -154,6 +191,8 @@ module.exports = function(context) {
                         console.log("[FirebasexAuth] Added reversed client ID URL scheme for reCAPTCHA verification");
                     }
                 }
+            } else {
+                console.warn("[FirebasexAuth] GoogleService-Info.plist not found at expected path: " + googlePlistPath);
             }
         } catch(e) {
             console.warn("[FirebasexAuth] Error setting up reCAPTCHA URL scheme: " + e.message);
@@ -165,13 +204,16 @@ module.exports = function(context) {
     // enabling the "Sign in with Apple" capability in the Xcode project.
     if (pluginVariables["IOS_ENABLE_APPLE_SIGNIN"] === "true") {
         try {
-            var entitlementsDebugPath = path.join(iosPlatformPath, appName, "Entitlements-Debug.plist");
-            var entitlementsReleasePath = path.join(iosPlatformPath, appName, "Entitlements-Release.plist");
+            var entitlementsDebugPath = path.join(getAppSubDirPath(iosPlatformPath, appName), "Entitlements-Debug.plist");
+            var entitlementsReleasePath = path.join(getAppSubDirPath(iosPlatformPath, appName), "Entitlements-Release.plist");
 
             [entitlementsDebugPath, entitlementsReleasePath].forEach(function(entPath) {
                 var entPlist = {};
                 if (fs.existsSync(entPath)) {
+                    console.log("[FirebasexAuth] Found existing entitlements plist at " + entPath + ", adding Apple Sign-In entitlement to it");
                     entPlist = plist.parse(fs.readFileSync(entPath, "utf-8"));
+                }else{
+                    console.log("[FirebasexAuth] No entitlements plist found at " + entPath + ", creating new one with Apple Sign-In entitlement");
                 }
                 entPlist["com.apple.developer.applesignin"] = ["Default"];
                 fs.writeFileSync(entPath, plist.build(entPlist));
@@ -207,6 +249,8 @@ module.exports = function(context) {
                         console.log("[FirebasexAuth] Google Sign In version set to v" + pluginVariables["IOS_GOOGLE_SIGIN_VERSION"] + " in Podfile");
                     }
                 }
+            } else {
+                console.warn("[FirebasexAuth] Podfile not found at expected path: " + podFilePath);
             }
         } catch(e) {
             console.warn("[FirebasexAuth] Error setting Google Sign-In version: " + e.message);
@@ -238,6 +282,8 @@ module.exports = function(context) {
                         console.log("[FirebasexAuth] Firebase Auth version set to v" + pluginVariables["IOS_FIREBASE_SDK_VERSION"] + " in Podfile");
                     }
                 }
+            } else {
+                console.warn("[FirebasexAuth] Podfile not found at expected path: " + podFilePath);
             }
         } catch(e) {
             console.warn("[FirebasexAuth] Error setting Firebase Auth version: " + e.message);
