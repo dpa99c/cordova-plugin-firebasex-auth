@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-firebasex-auth",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Firebase Authentication for Cordova - modular plugin extracted from cordova-plugin-firebasex",
   "cordova": {
     "id": "cordova-plugin-firebasex-auth",
