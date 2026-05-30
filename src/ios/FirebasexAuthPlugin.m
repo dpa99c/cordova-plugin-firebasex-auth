@@ -9,8 +9,9 @@
  * user profile operations, and auth state/ID token change listeners.
  */
 #import "FirebasexAuthPlugin.h"
-#import "FirebasexCorePlugin.h"
+@import cordova_plugin_firebasex_core;
 #import <CommonCrypto/CommonDigest.h>
+#import <FirebaseAuth/FIRAuthErrors.h>
 
 @import FirebaseAuth;
 @import GoogleSignIn;

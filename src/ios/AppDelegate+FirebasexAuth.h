@@ -7,14 +7,14 @@
  * for processing OAuth redirect URLs.
  */
 #import <UIKit/UIKit.h>
-#import "AppDelegate.h"
+#import <Cordova/CDVAppDelegate.h>
 
 /**
- * @brief AppDelegate category that integrates Firebase Auth URL handling.
+ * @brief CDVAppDelegate category that integrates Firebase Auth URL handling.
  *
  * Implements the @c application:openURL:options: method to handle OAuth callback URLs
  * from Google Sign-In. This is required for the Google Sign-In flow on iOS for
  * non-scene-based apps or older iOS versions.
  */
-@interface AppDelegate (FirebasexAuth)
+@interface CDVAppDelegate (FirebasexAuth)
 @end

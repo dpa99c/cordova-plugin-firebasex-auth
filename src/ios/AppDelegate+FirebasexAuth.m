@@ -11,7 +11,7 @@
 
 @import GoogleSignIn;
 
-@implementation AppDelegate (FirebasexAuth)
+@implementation CDVAppDelegate (FirebasexAuth)
 
 /**
  * Handles incoming URLs for OAuth callback processing.
