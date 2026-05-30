@@ -32,6 +32,12 @@ var WRAPPER_PLUGIN_ID = "cordova-plugin-firebasex";
 /** @constant {string} The expected app's Xcode name under `platforms/ios`. Since cordova-ios 8, this is `App`; in cordova <= 7 this was the project name. */
 var appNameCordova8Plus = "App";
 
+function isSwiftPackageManagerEnabled(projectRoot) {
+    var iosPlatformPath = path.join(projectRoot, "platforms", "ios");
+    var appSubDirPath = path.join(iosPlatformPath, appNameCordova8Plus);
+    return fs.existsSync(appSubDirPath) && fs.statSync(appSubDirPath).isDirectory();
+}
+
 /***************************
  * Internal helper functions
  ****************************/
@@ -50,6 +56,48 @@ function getAppSubDirPath(iosPlatformPath, appName) {
         return newPath;
     }
     return path.join(iosPlatformPath, appName);
+}
+
+function getPackageSwiftPaths(context) {
+    var paths = [
+        path.resolve(__dirname, "..", "..", "Package.swift"),
+        path.join(context.opts.projectRoot, "plugins", PLUGIN_ID, "Package.swift")
+    ];
+
+    return paths.filter(function(packageSwiftPath, index) {
+        return fs.existsSync(packageSwiftPath) && paths.indexOf(packageSwiftPath) === index;
+    });
+}
+
+function rewritePackageSwiftValue(packageSwiftContents, key, value) {
+    var packageValueRegex = new RegExp("let " + key + "(?:\\s*:\\s*Version)? = \\\"[^\\\"]+\\\"");
+    if (!packageValueRegex.test(packageSwiftContents)) {
+        return { contents: packageSwiftContents, modified: false };
+    }
+
+    var updatedContents = packageSwiftContents.replace(packageValueRegex, function(match) {
+        return match.replace(/\"[^\"]+\"/, '"' + value + '"');
+    });
+
+    return { contents: updatedContents, modified: updatedContents !== packageSwiftContents };
+}
+
+function updatePackageSwift(context, pluginVariables) {
+    getPackageSwiftPaths(context).forEach(function(packageSwiftPath) {
+        var packageSwiftContents = fs.readFileSync(packageSwiftPath, "utf-8");
+        var modified = false;
+
+        [["firebaseSDKVersion", pluginVariables["IOS_FIREBASE_SDK_VERSION"]], ["googleSignInVersion", pluginVariables["IOS_GOOGLE_SIGIN_VERSION"]]].forEach(function(update) {
+            if (!update[1]) return;
+            var result = rewritePackageSwiftValue(packageSwiftContents, update[0], update[1]);
+            packageSwiftContents = result.contents;
+            modified = modified || result.modified;
+        });
+
+        if (modified) {
+            fs.writeFileSync(packageSwiftPath, packageSwiftContents);
+        }
+    });
 }
 
 
@@ -128,6 +176,11 @@ module.exports = function(context) {
         Object.keys(context.opts.cli_variables).forEach(function(key){
             pluginVariables[key] = context.opts.cli_variables[key];
         });
+    }
+
+    var useSwiftPackageManager = isSwiftPackageManagerEnabled(context.opts.projectRoot);
+    if (useSwiftPackageManager) {
+        updatePackageSwift(context, pluginVariables);
     }
 
     var iosPlatformPath = path.join(context.opts.projectRoot, "platforms", "ios");
@@ -227,7 +280,7 @@ module.exports = function(context) {
     // Handle IOS_GOOGLE_SIGIN_VERSION:
     // Overrides the GoogleSignIn pod version in the Podfile to the version
     // specified by the plugin variable, allowing users to pin a specific version.
-    if (pluginVariables["IOS_GOOGLE_SIGIN_VERSION"]) {
+    if (!useSwiftPackageManager && pluginVariables["IOS_GOOGLE_SIGIN_VERSION"]) {
         try {
             var podFilePath = path.join(iosPlatformPath, "Podfile");
             if (fs.existsSync(podFilePath)) {
@@ -260,7 +313,7 @@ module.exports = function(context) {
     // Handle IOS_FIREBASE_SDK_VERSION:
     // Overrides the FirebaseAuth pod version in the Podfile to the version
     // specified by the plugin variable.
-    if (pluginVariables["IOS_FIREBASE_SDK_VERSION"]) {
+    if (!useSwiftPackageManager && pluginVariables["IOS_FIREBASE_SDK_VERSION"]) {
         try {
             var podFilePath = path.join(iosPlatformPath, "Podfile");
             if (fs.existsSync(podFilePath)) {

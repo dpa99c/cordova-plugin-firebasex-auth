@@ -48,7 +48,7 @@
     </platform>
 
     <!-- iOS -->
-    <platform name="ios">
+    <platform name="ios" package="swift">
         <config-file parent="/*" target="config.xml">
             <feature name="FirebasexAuthPlugin">
                 <param name="ios-package" value="FirebasexAuthPlugin" />
@@ -68,8 +68,8 @@
                 <source url="https://cdn.cocoapods.org/" />
             </config>
             <pods use-frameworks="true">
-                <pod name="FirebaseAuth" spec="12.9.0" />
-                <pod name="GoogleSignIn" spec="9.0.0" />
+                <pod name="FirebaseAuth" spec="12.9.0" nospm="true" />
+                <pod name="GoogleSignIn" spec="9.0.0" nospm="true" />
             </pods>
         </podspec>
 
