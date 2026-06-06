@@ -23,7 +23,7 @@
 
     <preference name="SETUP_RECAPTCHA_VERIFICATION" default="false" />
     <preference name="IOS_ENABLE_APPLE_SIGNIN" default="false" />
-    <preference name="IOS_GOOGLE_SIGIN_VERSION" default="9.0.0" />
+    <preference name="IOS_GOOGLE_SIGNIN_VERSION" default="9.1.0" />
 
     <!-- Android -->
     <platform name="android">
@@ -61,15 +61,15 @@
         <header-file src="src/ios/AppDelegate+FirebasexAuth.h" />
         <source-file src="src/ios/AppDelegate+FirebasexAuth.m" />
 
-        <preference name="IOS_FIREBASE_SDK_VERSION" default="12.9.0" />
+        <preference name="IOS_FIREBASE_SDK_VERSION" default="12.14.0" />
 
         <podspec>
             <config>
                 <source url="https://cdn.cocoapods.org/" />
             </config>
             <pods use-frameworks="true">
-                <pod name="FirebaseAuth" spec="12.9.0" nospm="true" />
-                <pod name="GoogleSignIn" spec="9.0.0" nospm="true" />
+                <pod name="FirebaseAuth" spec="12.14.0" nospm="true" />
+                <pod name="GoogleSignIn" spec="9.1.0" nospm="true" />
             </pods>
         </podspec>
 
