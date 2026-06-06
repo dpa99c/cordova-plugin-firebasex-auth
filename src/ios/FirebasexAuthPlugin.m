@@ -9,7 +9,13 @@
  * user profile operations, and auth state/ID token change listeners.
  */
 #import "FirebasexAuthPlugin.h"
-@import cordova_plugin_firebasex_core;
+#if __has_include("FirebasexCorePlugin.h")
+    // Cordova-ios 7 / CocoaPods: Files are compiled in a flat target structure
+    #import "FirebasexCorePlugin.h"
+#else
+    // Cordova-ios 8+ / SPM: Plugins are isolated Swift Package modules
+    @import cordova_plugin_firebasex_core;
+#endif
 #import <CommonCrypto/CommonDigest.h>
 #import <FirebaseAuth/FIRAuthErrors.h>
 
@@ -38,6 +44,7 @@ static FirebasexAuthPlugin* authPluginInstance;
     self.authCredentials = [NSMutableDictionary dictionary];
 
     @try {
+        [FirebasexCorePlugin.sharedInstance initFirebase];
         (void)[[FIRAuth auth] addAuthStateDidChangeListener:^(FIRAuth * _Nonnull auth, FIRUser * _Nullable user) {
             BOOL isSignedIn = user != nil;
             NSString* js = [NSString stringWithFormat:@"if(typeof(FirebasexAuth) !== 'undefined' && typeof(FirebasexAuth._onAuthStateChange) === 'function'){FirebasexAuth._onAuthStateChange(%@)}", isSignedIn ? @"true": @"false"];
