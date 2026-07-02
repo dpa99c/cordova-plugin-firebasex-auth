@@ -1189,8 +1189,10 @@ public class FirebasexAuthPlugin extends CordovaPlugin {
 
     /**
      * Internal implementation for OAuth provider authentication.
-     * Builds an {@link OAuthProvider} with the specified parameters and scopes,
-     * checks for a pending auth result, and stores the provider for later use.
+     * Builds an {@link OAuthProvider} with the specified parameters and scopes, then
+     * launches the sign-in flow via {@link FirebaseAuth#startActivityForSignInWithProvider}
+     * (or resumes a pending result if one exists). On success, stores the resulting
+     * credential for later use with {@link #signInWithCredential}.
      *
      * @param callbackContext  The callback for returning the result.
      * @param providerId       The OAuth provider ID (e.g. "apple.com", "microsoft.com").
@@ -1211,18 +1213,32 @@ public class FirebasexAuthPlugin extends CordovaPlugin {
                         provider.setScopes(scopes);
                     }
 
+                    OnSuccessListener<AuthResult> onSuccess = new OnSuccessListener<AuthResult>() {
+                        @Override
+                        public void onSuccess(AuthResult authResult) {
+                            try {
+                                AuthCredential credential = authResult.getCredential();
+                                String id = saveAuthCredential(credential);
+                                JSONObject returnResults = new JSONObject();
+                                returnResults.put("instantVerification", true);
+                                returnResults.put("id", id);
+                                callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, returnResults));
+                            } catch (Exception e) {
+                                handleExceptionWithContext(e, callbackContext);
+                            }
+                        }
+                    };
+
                     Task<AuthResult> pending = FirebaseAuth.getInstance().getPendingAuthResult();
                     if (pending != null) {
-                        callbackContext.error("Auth result is already pending");
                         pending
-                                .addOnSuccessListener(new AuthResultOnSuccessListener())
-                                .addOnFailureListener(new AuthResultOnFailureListener());
+                                .addOnSuccessListener(onSuccess)
+                                .addOnFailureListener(new AuthResultOnFailureListener(callbackContext));
                     } else {
-                        String id = saveAuthProvider(provider.build());
-                        JSONObject returnResults = new JSONObject();
-                        returnResults.put("instantVerification", true);
-                        returnResults.put("id", id);
-                        callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, returnResults));
+                        FirebaseAuth.getInstance()
+                                .startActivityForSignInWithProvider(cordova.getActivity(), provider.build())
+                                .addOnSuccessListener(onSuccess)
+                                .addOnFailureListener(new AuthResultOnFailureListener(callbackContext));
                     }
                 } catch (Exception e) {
                     handleExceptionWithContext(e, callbackContext);
