@@ -21,6 +21,7 @@
   },
   "author": "Dave Alden",
   "license": "MIT",
+  "types": "types/index.d.ts",
   "engines": {
     "cordovaDependencies": {
       "1.0.0": {
