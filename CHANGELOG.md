@@ -1,3 +1,6 @@
+# Version 2.0.1
+- fix: pin core plugin dependency to v2
+
 # Version 2.0.0
 - (ios) feat - BREAKING: Use Swift Package Manager (SPM) for Firebase SDK and other dependencies with `cordova-ios@8+`; continue to use Cocoapods for `cordova-ios@7`.
 - (android) Update pinned Firebase SDK versions to BoM v34.14.0 (May 28, 2026)
