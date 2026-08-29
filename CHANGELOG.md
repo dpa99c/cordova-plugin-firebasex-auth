@@ -1,3 +1,8 @@
+# Version 2.0.2
+- fix(android) Implement missing OAuth sign-in flow for Apple/Microsoft/generic providers
+	- Merged from [PR #1](https://github.com/dpa99c/cordova-plugin-firebasex-auth/pull/1)
+- fix: add types field to package.json so TypeScript resolves type definitions
+
 # Version 2.0.1
 - fix: pin core plugin dependency to v2
 
