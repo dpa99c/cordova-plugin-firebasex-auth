@@ -1,3 +1,6 @@
+# Version 1.0.4
+- fix: pin core plugin dependency to v1
+
 # Version 1.0.3
 - fix: update Android dependency versions and correct Java source target-dir.
 
