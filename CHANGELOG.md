@@ -1,3 +1,6 @@
+# Version 2.0.3
+- (ios) fix: apply `IOS_FIREBASE_SDK_VERSION` to both installed and generated Swift package manifests.
+
 # Version 2.0.2
 - fix(android) Implement missing OAuth sign-in flow for Apple/Microsoft/generic providers
 	- Merged from [PR #1](https://github.com/dpa99c/cordova-plugin-firebasex-auth/pull/1)
